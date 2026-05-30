@@ -577,15 +577,18 @@ const cssVar = (name) =>
 })();
 
 /* =====================================================================
-   LAW LIBRARY  (cards)
+   LIBRARIES  (physics laws + chemistry + maths cards)
+   One reusable builder, invoked once per subject. Each subject has its
+   own grid, search box, count and "no results" line.
    ===================================================================== */
-(function library() {
-  const laws = window.PHYSICS_LAWS || [];
-  const grid = $("lawGrid");
-  const search = $("lawSearch");
-  const clearBtn = $("searchClear");
-  const count = $("searchCount");
-  const noResults = $("noResults");
+function buildLibrary(opts) {
+  const laws = opts.laws || [];
+  const grid = $(opts.gridId);
+  const search = $(opts.searchId);
+  const clearBtn = $(opts.clearId);
+  const count = $(opts.countId);
+  const noResults = $(opts.noResultsId);
+  if (!grid) return;
 
   function highlight(str, q) {
     if (!q) return str;
@@ -651,41 +654,62 @@ const cssVar = (name) =>
         if (isInViewport(c.el)) startAnim(c);
       }
     });
-    noResults.hidden = shown > 0;
-    count.textContent = query
-      ? `${shown} of ${laws.length} laws match “${q.trim()}”`
-      : `${laws.length} laws in the library`;
+    if (noResults) noResults.hidden = shown > 0;
+    const noun = opts.noun || "laws";
+    if (count) count.textContent = query
+      ? `${shown} of ${laws.length} ${noun} match “${q.trim()}”`
+      : `${laws.length} ${noun} in the library`;
   }
   function isInViewport(el) {
     const r = el.getBoundingClientRect();
     return r.top < window.innerHeight && r.bottom > 0;
   }
 
-  search.addEventListener("input", () => {
-    clearBtn.hidden = search.value.length === 0;
-    applyFilter(search.value);
-  });
-  clearBtn.addEventListener("click", () => {
-    search.value = "";
-    clearBtn.hidden = true;
-    applyFilter("");
-    search.focus();
-  });
+  if (search) {
+    search.addEventListener("input", () => {
+      if (clearBtn) clearBtn.hidden = search.value.length === 0;
+      applyFilter(search.value);
+    });
+  }
+  if (clearBtn && search) {
+    clearBtn.addEventListener("click", () => {
+      search.value = "";
+      clearBtn.hidden = true;
+      applyFilter("");
+      search.focus();
+    });
+  }
 
   // honour a search carried over from another page (?q=… → jump + filter)
-  const incomingQ = new URLSearchParams(location.search).get("q");
+  const incomingQ = opts.handleIncomingQ ? new URLSearchParams(location.search).get("q") : null;
   if (incomingQ) {
-    search.value = incomingQ;
-    clearBtn.hidden = false;
+    if (search) search.value = incomingQ;
+    if (clearBtn) clearBtn.hidden = false;
     const side = $("sideSearch");
     if (side) side.value = incomingQ;
     applyFilter(incomingQ);
-    const laws = document.getElementById("laws");
-    if (laws) laws.scrollIntoView();
+    const target = document.getElementById("laws");
+    if (target) target.scrollIntoView();
   } else {
     applyFilter();
   }
-})();
+}
+
+buildLibrary({
+  laws: window.PHYSICS_LAWS, noun: "laws", handleIncomingQ: true,
+  gridId: "lawGrid", searchId: "lawSearch", clearId: "searchClear",
+  countId: "searchCount", noResultsId: "noResults",
+});
+buildLibrary({
+  laws: window.CHEM_TOPICS, noun: "topics",
+  gridId: "chemGrid", searchId: "chemSearch", clearId: "chemClear",
+  countId: "chemCount", noResultsId: "chemNoResults",
+});
+buildLibrary({
+  laws: window.MATH_TOPICS, noun: "topics",
+  gridId: "mathGrid", searchId: "mathSearch", clearId: "mathClear",
+  countId: "mathCount", noResultsId: "mathNoResults",
+});
 
 /* =====================================================================
    SIDEBAR  (vertical nav: mobile toggle + active-link highlight)

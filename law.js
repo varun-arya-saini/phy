@@ -23,7 +23,14 @@ const $ = (id) => document.getElementById(id);
 /* ---------- Find the requested law ---------- */
 const params = new URLSearchParams(location.search);
 const slug = params.get("id");
-const law = (window.PHYSICS_LAWS || []).find((l) => l.slug === slug);
+// Search across every library (physics, chemistry, maths) for this slug,
+// and remember which collection it belongs to so paging stays within it.
+const COLLECTIONS = [window.PHYSICS_LAWS, window.CHEM_TOPICS, window.MATH_TOPICS].filter(Boolean);
+let law = null, all = window.PHYSICS_LAWS || [];
+for (const set of COLLECTIONS) {
+  const found = set.find((l) => l.slug === slug);
+  if (found) { law = found; all = set; break; }
+}
 const root = $("detail");
 
 if (!law) {
@@ -35,7 +42,6 @@ if (!law) {
     </div>`;
 } else {
   document.title = `PhysicsLab — ${law.name}`;
-  const all = window.PHYSICS_LAWS;
   const idx = all.findIndex((l) => l.slug === slug);
   const prev = all[(idx - 1 + all.length) % all.length];
   const next = all[(idx + 1) % all.length];

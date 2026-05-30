@@ -429,6 +429,244 @@
         requestAnimationFrame(loop);
       })();
     },
+
+    /* ---- Snell's law: indices & incidence angle set how the beam bends ---- */
+    refraction(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, bx = W / 2, by = H / 2;
+      cap.textContent = "Light bends toward the normal entering a denser medium and away leaving it. Past the critical angle it reflects entirely.";
+      const RAY = 230;
+      let ph = 0;
+      const photons = (x1, y1, x2, y2, col) => {
+        for (let k = 0; k < 5; k++) {
+          const f = ((ph + k / 5) % 1);
+          const x = x1 + (x2 - x1) * f, y = y1 + (y2 - y1) * f;
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill();
+        }
+      };
+      (function loop() {
+        ph = (ph + 0.01) % 1;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(91,140,255,0.05)"; ctx.fillRect(0, 0, W, by);
+        ctx.fillStyle = "rgba(91,140,255,0.18)"; ctx.fillRect(0, by, W, H - by);
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, by); ctx.lineTo(W, by); ctx.stroke();
+        ctx.strokeStyle = cssVar("--line"); ctx.setLineDash([5, 6]);
+        ctx.beginPath(); ctx.moveTo(bx, 36); ctx.lineTo(bx, H - 36); ctx.stroke(); ctx.setLineDash([]);
+
+        const th1 = (P.angle * Math.PI) / 180;
+        const ix = bx - Math.sin(th1) * RAY, iy = by - Math.cos(th1) * RAY;
+        arrow(ctx, ix, iy, bx, by, cssVar("--warn"), 3);
+        photons(ix, iy, bx, by, cssVar("--warn"));
+
+        const sin2 = (P.n1 / P.n2) * Math.sin(th1);
+        if (Math.abs(sin2) <= 1) {
+          const th2 = Math.asin(sin2);
+          const rx = bx + Math.sin(th2) * RAY, ry = by + Math.cos(th2) * RAY;
+          arrow(ctx, bx, by, rx, ry, cssVar("--accent"), 3);
+          photons(bx, by, rx, ry, cssVar("--accent"));
+          setRO(ro, `θ₁ = <b>${P.angle}°</b> → θ₂ = <b>${((th2 * 180) / Math.PI).toFixed(1)}°</b> · n₁ sinθ₁ = n₂ sinθ₂ = <b>${(P.n1 * Math.sin(th1)).toFixed(3)}</b>`);
+        } else {
+          const fx = bx + Math.sin(th1) * RAY, fy = by - Math.cos(th1) * RAY;
+          arrow(ctx, bx, by, fx, fy, cssVar("--accent-2"), 3);
+          photons(bx, by, fx, fy, cssVar("--accent-2"));
+          const crit = (Math.asin(P.n2 / P.n1) * 180) / Math.PI;
+          setRO(ro, `θ₁ = <b>${P.angle}°</b> exceeds the critical angle <b>${crit.toFixed(1)}°</b> → <b>total internal reflection</b>`);
+        }
+        ctx.fillStyle = cssVar("--muted"); ctx.font = "600 13px Inter"; ctx.textAlign = "left";
+        ctx.fillText(`n₁ = ${P.n1.toFixed(2)}`, 16, 26);
+        ctx.fillText(`n₂ = ${P.n2.toFixed(2)}`, 16, H - 16);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Doppler effect: moving source bunches wavefronts ahead of it ---- */
+    doppler(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, y = H / 2;
+      cap.textContent = "Wavefronts bunch up ahead of the moving source (higher pitch) and stretch out behind it (lower pitch).";
+      const C = 2.3;
+      let sx, waves, emit;
+      const reset = () => { sx = 70; waves = []; emit = 0; };
+      reset();
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        sx += P.speed * C * 0.42;
+        if (sx > W - 60) reset();
+        if (++emit >= 15) { emit = 0; waves.push({ x: sx, r: 0 }); }
+        waves.forEach((w) => (w.r += C));
+        waves = waves.filter((w) => w.r < W * 1.3);
+        waves.forEach((w) => {
+          const a = clamp(1 - w.r / (W * 1.1), 0, 1);
+          ctx.strokeStyle = `rgba(91,140,255,${0.15 + a * 0.5})`; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(w.x, y, w.r, 0, TAU); ctx.stroke();
+        });
+        const obs = (ox, label, ahead) => {
+          const moving = P.speed > 0.02;
+          const hot = moving && ahead;
+          ctx.fillStyle = hot ? "#e8554d" : moving ? "#4d7de8" : cssVar("--muted");
+          ctx.beginPath(); ctx.arc(ox, y, 9, 0, TAU); ctx.fill();
+          ctx.fillStyle = cssVar("--text"); ctx.font = "600 12px Inter"; ctx.textAlign = "center";
+          ctx.fillText(label, ox, y - 18);
+        };
+        obs(W - 28, "higher ♪", true);
+        obs(28, "lower ♪", false);
+        const g = ctx.createRadialGradient(sx - 3, y - 3, 1, sx, y, 13);
+        g.addColorStop(0, cssVar("--accent-2")); g.addColorStop(1, cssVar("--accent"));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, y, 13, 0, TAU); ctx.fill();
+        if (P.speed > 0.02) arrow(ctx, sx + 14, y, sx + 22 + P.speed * 22, y, cssVar("--warn"), 3);
+        const ratio = P.speed < 1 ? 1 / (1 - P.speed) : Infinity;
+        const ahead = isFinite(ratio) ? `<b>${ratio.toFixed(2)}× f</b>` : "<b>shock wave</b>";
+        setRO(ro, `source speed = <b>${P.speed.toFixed(2)}×</b> wave speed · pitch ahead ${ahead} · pitch behind <b>${(1 / (1 + P.speed)).toFixed(2)}× f</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Bernoulli: narrow the throat → flow speeds up, pressure drops ---- */
+    bernoulli(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cy = H / 2;
+      cap.textContent = "Squeezed through the narrow throat, the fluid speeds up — and its pressure drops below the wide sections.";
+      const wide = 95;
+      const half = (x) => {
+        const t = Math.exp(-Math.pow((x - W / 2) / (W * 0.15), 2));
+        return wide - (wide - wide * (P.narrow / 100)) * t;
+      };
+      const N = 80;
+      const parts = Array.from({ length: N }, (_, i) => ({
+        x: (i / N) * W,
+        lane: (((i * 37) % 100) / 100) * 1.7 - 0.85,
+      }));
+      const gauge = (x, label) => {
+        const speed = wide / half(x);
+        const col = 90 - (speed * speed - 1) * 26;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 2;
+        ctx.strokeRect(x - 10, cy - half(x) - 86, 20, 86);
+        ctx.fillStyle = cssVar("--accent-2");
+        const h = clamp(col, 6, 80);
+        ctx.fillRect(x - 9, cy - half(x) - 1 - h, 18, h);
+        ctx.fillStyle = cssVar("--text"); ctx.font = "600 11px Inter"; ctx.textAlign = "center";
+        ctx.fillText(label, x, cy - half(x) - 94);
+      };
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(56,232,200,0.10)";
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 6) ctx.lineTo(x, cy - half(x));
+        for (let x = W; x >= 0; x -= 6) ctx.lineTo(x, cy + half(x));
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3;
+        ctx.beginPath(); for (let x = 0; x <= W; x += 6) ctx.lineTo(x, cy - half(x)); ctx.stroke();
+        ctx.beginPath(); for (let x = 0; x <= W; x += 6) ctx.lineTo(x, cy + half(x)); ctx.stroke();
+        ctx.fillStyle = cssVar("--accent");
+        parts.forEach((p) => {
+          const v = 1.6 * (wide / half(p.x));
+          p.x += v;
+          if (p.x > W) p.x -= W;
+          const y = cy + p.lane * half(p.x);
+          ctx.beginPath(); ctx.arc(p.x, y, 3, 0, TAU); ctx.fill();
+        });
+        gauge(W * 0.16, "high P");
+        gauge(W / 2, "low P");
+        gauge(W * 0.84, "high P");
+        const vThroat = wide / half(W / 2);
+        setRO(ro, `throat width = <b>${P.narrow}%</b> · flow there is <b>${vThroat.toFixed(2)}×</b> faster · so its pressure is <b>lowest</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Charles's law: raise temperature → gas expands in proportion ---- */
+    charles(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "Heat the gas and it expands to keep the pressure steady — volume rises in step with absolute temperature.";
+      const cylX = 110, cylW = 250, cylBot = H - 60, cylTop = 50, span = cylBot - cylTop - 30;
+      const N = 30;
+      const mol = Array.from({ length: N }, (_, i) => ({
+        x: cylX + 20 + ((i * 53) % (cylW - 40)),
+        y: cylBot - 30 - ((i * 71) % 120),
+        vx: ((i % 5) - 2) || 1, vy: ((i % 4) - 1.5) || 1,
+      }));
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const frac = clamp(P.temp / 520, 0.12, 1);
+        const gasH = span * frac;
+        const pistonY = cylBot - gasH;
+        const speed = 0.5 + (P.temp / 500) * 2.3;
+        const heat = clamp((P.temp - 150) / 350, 0, 1);
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(cylX, cylTop); ctx.lineTo(cylX, cylBot); ctx.lineTo(cylX + cylW, cylBot); ctx.lineTo(cylX + cylW, cylTop); ctx.stroke();
+        ctx.fillStyle = `rgba(255,${150 - heat * 110},${90 - heat * 70},${0.08 + heat * 0.14})`;
+        ctx.fillRect(cylX + 2, pistonY, cylW - 4, gasH);
+        ctx.fillStyle = cssVar("--accent-2");
+        mol.forEach((m) => {
+          m.x += m.vx * speed * 0.5; m.y += m.vy * speed * 0.5;
+          if (m.x < cylX + 8 || m.x > cylX + cylW - 8) m.vx *= -1;
+          if (m.y > cylBot - 8 || m.y < pistonY + 8) m.vy *= -1;
+          m.x = clamp(m.x, cylX + 8, cylX + cylW - 8);
+          m.y = clamp(m.y, pistonY + 8, cylBot - 8);
+          ctx.beginPath(); ctx.arc(m.x, m.y, 4.5, 0, TAU); ctx.fill();
+        });
+        ctx.fillStyle = cssVar("--accent"); roundRect(ctx, cylX - 6, pistonY - 16, cylW + 12, 16, 4); ctx.fill();
+        ctx.fillStyle = cssVar("--muted"); ctx.fillRect(cylX + cylW / 2 - 6, pistonY - 52, 12, 38);
+        // thermometer
+        const tx = cylX + cylW + 80, tTop = cylTop + 10, tBot = cylBot - 10;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(tx, tTop); ctx.lineTo(tx, tBot); ctx.stroke();
+        ctx.beginPath(); ctx.arc(tx, tBot + 14, 13, 0, TAU); ctx.stroke();
+        ctx.fillStyle = cssVar("--warn");
+        const mercH = (tBot - tTop) * clamp((P.temp - 100) / 420, 0.05, 1);
+        ctx.fillRect(tx - 3, tBot - mercH, 6, mercH);
+        ctx.beginPath(); ctx.arc(tx, tBot + 14, 11, 0, TAU); ctx.fill();
+        setRO(ro, `T = <b>${P.temp} K</b> · volume ∝ T → fills <b>${(frac * 100).toFixed(0)}%</b> · V/T = <b>${(frac / P.temp * 1000).toFixed(2)}</b> (constant)`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Faraday: a moving magnet through a coil drives the meter ---- */
+    induction(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cy = H * 0.46;
+      cap.textContent = "Only a CHANGING field induces a voltage. Move the magnet faster, or add turns, for a bigger swing — reverse the motion and the needle flips.";
+      const coilX = W * 0.5, coilW = 120;
+      let t = 0;
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        t += 0.02 * P.speed;
+        const swing = 110;
+        const mx = coilX - 30 + Math.sin(t) * swing;
+        const vel = Math.cos(t) * P.speed;
+        const inside = Math.abs(mx - coilX) < coilW;
+        const emf = inside ? vel * P.turns * 0.9 : vel * P.turns * 0.18;
+        // coil
+        ctx.strokeStyle = cssVar("--accent"); ctx.lineWidth = 3;
+        const turns = P.turns;
+        for (let i = 0; i < turns; i++) {
+          const lx = coilX - coilW / 2 + (i / Math.max(1, turns - 1)) * coilW;
+          ctx.beginPath(); ctx.ellipse(lx, cy, 10, 46, 0, 0, TAU); ctx.stroke();
+        }
+        // leads down to the meter
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(coilX - coilW / 2, cy + 46); ctx.lineTo(coilX - coilW / 2, H - 70); ctx.lineTo(W / 2 - 40, H - 70); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(coilX + coilW / 2, cy + 46); ctx.lineTo(coilX + coilW / 2, H - 70); ctx.lineTo(W / 2 + 40, H - 70); ctx.stroke();
+        // magnet
+        const mw = 90, mh = 30;
+        ctx.fillStyle = "#e8554d"; roundRect(ctx, mx - mw / 2, cy - mh / 2, mw / 2, mh, 4); ctx.fill();
+        ctx.fillStyle = "#4d7de8"; roundRect(ctx, mx, cy - mh / 2, mw / 2, mh, 4); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "700 15px Inter"; ctx.textAlign = "center";
+        ctx.fillText("N", mx - mw / 4, cy + 5); ctx.fillText("S", mx + mw / 4, cy + 5);
+        if (Math.abs(vel) > 0.02) arrow(ctx, mx, cy - mh / 2 - 8, mx + Math.sign(vel) * (18 + Math.abs(vel) * 16), cy - mh / 2 - 8, cssVar("--warn"), 3);
+        // galvanometer
+        const gx = W / 2, gy = H - 70, gr = 34;
+        ctx.fillStyle = cssVar("--card-2"); ctx.beginPath(); ctx.arc(gx, gy, gr, 0, TAU); ctx.fill();
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx, gy, gr, 0, TAU); ctx.stroke();
+        const defl = clamp(emf, -1, 1) * 1.1;
+        const ang = -Math.PI / 2 + defl;
+        ctx.strokeStyle = cssVar("--warn"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(ang) * (gr - 6), gy + Math.sin(ang) * (gr - 6)); ctx.stroke();
+        ctx.fillStyle = cssVar("--muted"); ctx.font = "600 11px Inter"; ctx.textAlign = "center";
+        ctx.fillText("− 0 +", gx, gy + gr + 16);
+        setRO(ro, `N = <b>${P.turns} turns</b> · ${inside ? "magnet inside the coil" : "magnet outside"} · induced EMF ≈ <b>${(emf).toFixed(2)}</b> (∝ speed × turns)`);
+        requestAnimationFrame(loop);
+      })();
+    },
   };
 
   window.PHYS_ANIM = ANIMATIONS;
