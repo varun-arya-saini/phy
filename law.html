@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhysicsLab — Law</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital@1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="detail-body">
+
+  <!-- ===== Sidebar (same as the front page) ===== -->
+  <button id="sidebarToggle" class="sidebar-toggle" title="Menu" aria-label="Toggle menu">☰</button>
+  <aside class="sidebar" id="sidebar">
+    <a href="index.html" class="brand">
+      <span class="logo">⚛</span>
+      <span>Physics<strong>Lab</strong></span>
+    </a>
+
+    <div class="side-search">
+      <span class="side-search-icon">🔍</span>
+      <input type="text" id="sideSearch" class="side-search-input"
+             placeholder="Search laws… (Enter)" autocomplete="off" aria-label="Search laws" />
+    </div>
+
+    <span class="nav-heading">Explore</span>
+    <nav class="nav">
+      <a href="index.html#projectile">🎯 Projectile Motion</a>
+      <a href="index.html#pendulum">⏱ Simple Pendulum</a>
+      <a href="index.html#newton">🛒 Newton's Second Law</a>
+      <a href="index.html#ohm">💡 Ohm's Law</a>
+      <a href="index.html#hooke">🔧 Hooke's Law</a>
+      <a href="index.html#laws">📚 Law Library</a>
+    </nav>
+    <button id="themeToggle" class="theme-toggle" title="Toggle theme">🌙 Theme</button>
+  </aside>
+
+  <main class="detail-main" id="detail">
+    <!-- filled by law.js -->
+  </main>
+
+  <footer class="site-footer">
+    <p class="muted">PhysicsLab · an interactive demonstration of classical physics</p>
+  </footer>
+
+  <script src="laws-data.js"></script>
+  <script src="animations.js"></script>
+  <script src="law.js"></script>
+</body>
+</html>
