@@ -973,6 +973,268 @@ const TAU = Math.PI * 2;
         requestAnimationFrame(loop);
       })();
     },
+
+    /* ---- Gay-Lussac: sealed box, hotter gas → higher pressure ---- */
+    c_gaylussac(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "In a sealed rigid container, heating the gas makes molecules strike the walls harder and more often — so pressure climbs with temperature.";
+      const bx = 50, by = 60, bw = W * 0.44, bh = H - 130;
+      const parts = Array.from({ length: 26 }, () => ({
+        x: bx + Math.random() * bw, y: by + Math.random() * bh,
+        dx: Math.random() * 2 - 1, dy: Math.random() * 2 - 1,
+      }));
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const speed = 0.3 + P.temp / 120;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3; ctx.strokeRect(bx, by, bw, bh);
+        ctx.fillStyle = cssVar("--accent");
+        parts.forEach((p) => {
+          p.x += p.dx * speed; p.y += p.dy * speed;
+          if (p.x < bx + 5 || p.x > bx + bw - 5) p.dx *= -1;
+          if (p.y < by + 5 || p.y > by + bh - 5) p.dy *= -1;
+          p.x = clamp(p.x, bx + 5, bx + bw - 5); p.y = clamp(p.y, by + 5, by + bh - 5);
+          ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, TAU); ctx.fill();
+        });
+        const gx = W * 0.76, gy = H / 2, gr = 66;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(gx, gy, gr, Math.PI * 0.75, Math.PI * 2.25); ctx.stroke();
+        const frac = clamp(P.temp / 600, 0, 1);
+        const a = Math.PI * 0.75 + frac * Math.PI * 1.5;
+        ctx.strokeStyle = cssVar("--warn"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(a) * (gr - 10), gy + Math.sin(a) * (gr - 10)); ctx.stroke();
+        ctx.fillStyle = cssVar("--muted"); ctx.beginPath(); ctx.arc(gx, gy, 5, 0, TAU); ctx.fill();
+        ctx.fillStyle = cssVar("--text"); ctx.font = "600 13px Inter"; ctx.textAlign = "center";
+        ctx.fillText("pressure", gx, gy + gr + 20);
+        ctx.lineWidth = 1;
+        setRO(ro, `T = <b>${P.temp} K</b> · P ∝ T · relative pressure = <b>${(P.temp / 300).toFixed(2)}×</b> (at fixed volume)`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Avogadro: more moles → proportionally more volume ---- */
+    c_avogadro(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "At the same temperature and pressure, equal volumes hold equal numbers of molecules. Add gas and the volume grows in step.";
+      const pool = Array.from({ length: 40 }, () => ({ rx: Math.random(), ry: Math.random(), ph: Math.random() * TAU }));
+      let t = 0;
+      (function loop() {
+        t += 0.05;
+        ctx.clearRect(0, 0, W, H);
+        const cxL = W / 2, baseY = H - 56, fullH = H - 130;
+        const frac = clamp(P.moles / 4, 0.12, 1);
+        const colW = 170, colH = fullH * frac, colX = cxL - colW / 2, colTop = baseY - colH;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(colX, baseY - fullH - 14); ctx.lineTo(colX, baseY);
+        ctx.lineTo(colX + colW, baseY); ctx.lineTo(colX + colW, baseY - fullH - 14);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(91,140,255,0.12)"; ctx.fillRect(colX, colTop, colW, colH);
+        ctx.fillStyle = cssVar("--muted"); ctx.fillRect(colX - 6, colTop - 12, colW + 12, 12);
+        const count = Math.round(P.moles * 9);
+        ctx.fillStyle = cssVar("--accent-2");
+        for (let i = 0; i < count; i++) {
+          const p = pool[i % pool.length];
+          const x = colX + 8 + p.rx * (colW - 16);
+          const y = colTop + 8 + p.ry * (colH - 16) + Math.sin(t + p.ph) * 2;
+          ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill();
+        }
+        ctx.lineWidth = 1;
+        setRO(ro, `n = <b>${P.moles} mol</b> · molecules ≈ <b>${(P.moles * 6.02).toFixed(2)} × 10²³</b> · V ∝ n`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Isotopes: carbon nucleus, fixed protons, variable neutrons ---- */
+    c_isotopes(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2;
+      cap.textContent = "Isotopes are atoms of the same element — same protons — but different numbers of neutrons, which changes only the mass.";
+      const Z = 6;
+      let t = 0;
+      (function loop() {
+        t += 0.02;
+        ctx.clearRect(0, 0, W, H);
+        const N = Math.round(P.neutrons), total = Z + N;
+        for (let i = 0; i < total; i++) {
+          const a = i * 2.4, rr = 3 + Math.sqrt(i) * 7;
+          const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+          ctx.fillStyle = i < Z ? cssVar("--warn") : cssVar("--accent");
+          ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fill();
+        }
+        const R = 118;
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+        ctx.fillStyle = cssVar("--accent-2");
+        for (let i = 0; i < Z; i++) {
+          const a = t + (i * TAU) / Z;
+          ctx.beginPath(); ctx.arc(cx + Math.cos(a) * R, cy + Math.sin(a) * R, 5, 0, TAU); ctx.fill();
+        }
+        setRO(ro, `Carbon-${total}: <b>${Z}</b> protons (yellow) + <b>${N}</b> neutrons (blue) · mass number A = <b>${total}</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Solubility: dissolved vs settled crystals at a temperature ---- */
+    c_solubility(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "A liquid dissolves only so much solute. Heating raises that limit; add more than it can hold and the excess sinks as crystals.";
+      const pool = Array.from({ length: 140 }, () => ({ rx: Math.random(), ry: Math.random(), ph: Math.random() * TAU }));
+      let t = 0;
+      (function loop() {
+        t += 0.05;
+        ctx.clearRect(0, 0, W, H);
+        const bx = W / 2 - 120, by = 64, bw = 240, bh = H - 130;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by); ctx.stroke();
+        ctx.fillStyle = "rgba(91,140,255,0.10)"; ctx.fillRect(bx, by + 18, bw, bh - 18);
+        const capacity = 4 + P.temp / 12;
+        const dissolved = Math.min(P.solute, capacity);
+        const undissolved = Math.max(0, P.solute - capacity);
+        const dCount = Math.round(dissolved * 4), uCount = Math.round(undissolved * 6);
+        ctx.fillStyle = cssVar("--accent-2");
+        for (let i = 0; i < dCount; i++) {
+          const p = pool[i % pool.length];
+          const x = bx + 12 + p.rx * (bw - 24);
+          const y = by + 28 + p.ry * (bh - 48) + Math.sin(t + p.ph) * 3;
+          ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill();
+        }
+        ctx.fillStyle = cssVar("--warn");
+        for (let i = 0; i < uCount; i++) {
+          const p = pool[(i + 70) % pool.length];
+          const x = bx + 12 + p.rx * (bw - 24);
+          const y = by + bh - 6 - p.ry * 22;
+          ctx.fillRect(x - 2, y - 2, 4, 4);
+        }
+        ctx.lineWidth = 1;
+        setRO(ro, `T = <b>${P.temp} °C</b> · solubility limit ≈ <b>${capacity.toFixed(1)} g</b> · dissolved <b>${dissolved.toFixed(1)} g</b>${undissolved > 0 ? ` · <b>${undissolved.toFixed(1)} g</b> undissolved` : ""}`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Trig ratios: a right triangle whose angle sets sin/cos/tan ---- */
+    m_trig(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "In a right triangle the angle fixes the ratios of the sides — SOH-CAH-TOA. Sine is opposite/hypotenuse, cosine adjacent/hypotenuse, tangent opposite/adjacent.";
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const th = (P.angle * Math.PI) / 180;
+        const ox = W * 0.2, oy = H * 0.8;
+        const adj = Math.min(W * 0.52, 280);
+        const opp = adj * Math.tan(th);
+        const ax = ox + adj, ay = oy, tx = ax, ty = oy - opp;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = cssVar("--muted"); ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ax, ay); ctx.stroke();
+        ctx.strokeStyle = cssVar("--accent"); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(tx, ty); ctx.stroke();
+        ctx.strokeStyle = cssVar("--accent-2"); ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(tx, ty); ctx.stroke();
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1.5; ctx.strokeRect(ax - 12, ay - 12, 12, 12);
+        ctx.strokeStyle = cssVar("--warn"); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ox, oy, 34, -th, 0); ctx.stroke();
+        ctx.font = "600 13px Inter";
+        ctx.fillStyle = cssVar("--muted"); ctx.textAlign = "center"; ctx.fillText("adjacent", (ox + ax) / 2, oy + 20);
+        ctx.fillStyle = cssVar("--accent"); ctx.textAlign = "left"; ctx.fillText("opposite", ax + 8, (ay + ty) / 2);
+        ctx.fillStyle = cssVar("--accent-2"); ctx.fillText("hypotenuse", (ox + tx) / 2 - 60, (oy + ty) / 2 - 8);
+        ctx.fillStyle = cssVar("--warn"); ctx.fillText("θ", ox + 42, oy - 8);
+        ctx.lineWidth = 1;
+        setRO(ro, `θ = <b>${P.angle}°</b> · sin = <b>${Math.sin(th).toFixed(3)}</b> · cos = <b>${Math.cos(th).toFixed(3)}</b> · tan = <b>${Math.tan(th).toFixed(3)}</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Logarithm: log_b(x) is the mirror of b^x across y = x ---- */
+    m_logarithm(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "A logarithm answers “what power gives this number?”. log_b(x) is the mirror image of bˣ across the diagonal y = x.";
+      const ox = 50, oy = H - 46, sx = (W - 90) / 8, sy = (H - 90) / 8;
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ox, 18); ctx.lineTo(ox, oy); ctx.lineTo(W - 26, oy); ctx.stroke();
+        ctx.strokeStyle = cssVar("--muted"); ctx.setLineDash([4, 5]);
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + 8 * sx, oy - 8 * sy); ctx.stroke(); ctx.setLineDash([]);
+        const b = P.base;
+        ctx.strokeStyle = cssVar("--accent"); ctx.lineWidth = 2; ctx.beginPath();
+        let started = false;
+        for (let x = 0; x <= 8; x += 0.04) {
+          const y = Math.pow(b, x); if (y > 8) break;
+          const px = ox + x * sx, py = oy - y * sy;
+          started ? ctx.lineTo(px, py) : ctx.moveTo(px, py); started = true;
+        }
+        ctx.stroke();
+        ctx.strokeStyle = cssVar("--accent-2"); ctx.lineWidth = 2; ctx.beginPath(); started = false;
+        for (let x = 0.04; x <= 8; x += 0.04) {
+          const y = Math.log(x) / Math.log(b);
+          const px = ox + x * sx, py = oy - y * sy;
+          if (py > oy + 2) { started = false; continue; }
+          started ? ctx.lineTo(px, py) : ctx.moveTo(px, py); started = true;
+        }
+        ctx.stroke(); ctx.lineWidth = 1;
+        ctx.font = "600 12px Inter";
+        ctx.fillStyle = cssVar("--accent"); ctx.textAlign = "left"; ctx.fillText(`y = ${b.toFixed(1)}ˣ`, ox + 10, 32);
+        ctx.fillStyle = cssVar("--accent-2"); ctx.fillText("y = logᵦ x", W - 120, oy - 12);
+        setRO(ro, `base b = <b>${b.toFixed(1)}</b> · logᵦ(4) = <b>${(Math.log(4) / Math.log(b)).toFixed(3)}</b> · b raised to that = <b>4</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Complex numbers: a + bi on the Argand plane, spinning ghost ---- */
+    m_complex(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2;
+      cap.textContent = "A complex number is a point on the plane: a + bi. Its distance from the origin is the magnitude, the angle is its argument. Multiplying spins and scales — the dashed ghost shows continual rotation.";
+      const scale = 26;
+      let spin = 0;
+      (function loop() {
+        spin += 0.01;
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+        const th = (P.arg * Math.PI) / 180;
+        const a = P.mag * Math.cos(th), b = P.mag * Math.sin(th);
+        const px = cx + a * scale, py = cy - b * scale;
+        const gx = cx + Math.cos(th + spin) * P.mag * scale, gy = cy - Math.sin(th + spin) * P.mag * scale;
+        ctx.strokeStyle = cssVar("--line"); ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(gx, gy); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = cssVar("--muted"); ctx.beginPath(); ctx.arc(gx, gy, 4, 0, TAU); ctx.fill();
+        ctx.strokeStyle = cssVar("--warn"); ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, cy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(cx, py); ctx.stroke(); ctx.setLineDash([]);
+        arrow(ctx, cx, cy, px, py, cssVar("--accent"), 3);
+        ctx.fillStyle = cssVar("--accent-2"); ctx.beginPath(); ctx.arc(px, py, 6, 0, TAU); ctx.fill();
+        setRO(ro, `z = <b>${a.toFixed(2)} ${b >= 0 ? "+" : "−"} ${Math.abs(b).toFixed(2)}i</b> · |z| = <b>${P.mag.toFixed(1)}</b> · arg = <b>${P.arg}°</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Arithmetic sequence: terms march along a straight line ---- */
+    m_sequence(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+      cap.textContent = "An arithmetic sequence adds the same step every term. Plot the terms and they march in a perfectly straight line.";
+      const n = 8, ox = 56, oy = H - 46, colW = (W - 96) / n;
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ox, 18); ctx.lineTo(ox, oy); ctx.lineTo(W - 26, oy); ctx.stroke();
+        const vals = [];
+        for (let i = 0; i < n; i++) vals.push(P.first + i * P.diff);
+        const maxV = Math.max(1, ...vals.map((v) => Math.abs(v)));
+        const sy = (oy - 36) / maxV;
+        let prev = null;
+        ctx.font = "600 11px Inter"; ctx.textAlign = "center";
+        for (let i = 0; i < n; i++) {
+          const x = ox + colW * (i + 0.5), y = oy - vals[i] * sy;
+          ctx.fillStyle = "rgba(91,140,255,0.18)";
+          ctx.fillRect(x - colW * 0.3, Math.min(oy, y), colW * 0.6, Math.abs(oy - y));
+          if (prev) {
+            ctx.strokeStyle = cssVar("--accent"); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(x, y); ctx.stroke(); ctx.lineWidth = 1;
+          }
+          ctx.fillStyle = cssVar("--accent-2"); ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.fill();
+          ctx.fillStyle = cssVar("--muted"); ctx.fillText(vals[i].toFixed(1), x, oy + 16);
+          prev = [x, y];
+        }
+        const sum = vals.reduce((s, v) => s + v, 0);
+        setRO(ro, `aₙ = a + (n−1)d · a = <b>${P.first}</b>, d = <b>${P.diff}</b> · sum of 8 terms = <b>${sum.toFixed(1)}</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
   };
 
 export const EXTRA_ANIM = EXTRA;
