@@ -666,6 +666,121 @@ const TAU = Math.PI * 2;
         requestAnimationFrame(loop);
       })();
     },
+
+    /* ---- Centripetal force: ball on a string, inward pull ∝ v²/r ---- */
+    centripetal(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2;
+      cap.textContent = "The inward (centripetal) force keeps the ball on its circular path. Faster spin or a tighter circle needs a stronger pull.";
+      let ang = 0;
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const r = clamp(34 + P.r * 22, 34, Math.min(W, H) / 2 - 34);
+        const F = (P.mass * P.v * P.v) / P.r;
+        ctx.strokeStyle = cssVar("--line"); ctx.setLineDash([5, 7]);
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = cssVar("--muted"); ctx.beginPath(); ctx.arc(cx, cy, 4, 0, TAU); ctx.fill();
+        ang += (P.v / P.r) * 0.02 + 0.004;
+        const px = cx + Math.cos(ang) * r, py = cy + Math.sin(ang) * r;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+        const flen = clamp(F * 1.1, 14, r - 6);
+        arrow(ctx, px, py, px + ((cx - px) / r) * flen, py + ((cy - py) / r) * flen, cssVar("--warn"), 3);
+        arrow(ctx, px, py, px - Math.sin(ang) * 34, py + Math.cos(ang) * 34, cssVar("--accent-2"), 3);
+        const r0 = 9 + P.mass * 1.6;
+        const g = ctx.createRadialGradient(px - 3, py - 3, 1, px, py, r0);
+        g.addColorStop(0, cssVar("--accent-2")); g.addColorStop(1, cssVar("--accent"));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r0, 0, TAU); ctx.fill();
+        ctx.lineWidth = 1;
+        setRO(ro, `F = m·v²/r = <b>${F.toFixed(1)} N</b> · v = <b>${P.v} m/s</b> · r = <b>${P.r} m</b> (yellow = inward force, green = velocity)`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Kinetic energy: a sliding block with an energy bar ∝ ½mv² ---- */
+    kinetic(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, baseY = H * 0.62;
+      cap.textContent = "Kinetic energy grows with the square of speed: double the speed and you quadruple the energy.";
+      let x = 70;
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const KE = 0.5 * P.mass * P.v * P.v;
+        ctx.strokeStyle = cssVar("--muted"); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(40, baseY + 30); ctx.lineTo(W - 40, baseY + 30); ctx.stroke();
+        x += P.v * 0.8; if (x > W - 60) x = 70;
+        const w = 38 + P.mass * 5, h = 28 + P.mass * 3;
+        arrow(ctx, x, baseY + 30 - h / 2, x + 26 + P.v * 3, baseY + 30 - h / 2, cssVar("--accent-2"), 3);
+        ctx.fillStyle = cssVar("--accent"); roundRect(ctx, x, baseY + 30 - h, w, h, 6); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.font = "600 13px Inter"; ctx.textAlign = "center";
+        ctx.fillText(P.mass + " kg", x + w / 2, baseY + 30 - h / 2 + 4);
+        const barX = 50, barY = 38, barW = W - 100, barH = 18;
+        ctx.strokeStyle = cssVar("--line"); ctx.strokeRect(barX, barY, barW, barH);
+        const frac = clamp(KE / (0.5 * 10 * 12 * 12), 0, 1);
+        ctx.fillStyle = cssVar("--warn"); ctx.fillRect(barX, barY, barW * frac, barH);
+        ctx.fillStyle = cssVar("--text"); ctx.font = "600 12px Inter"; ctx.textAlign = "left";
+        ctx.fillText("kinetic energy", barX, barY - 7);
+        setRO(ro, `KE = ½·m·v² = <b>${KE.toFixed(1)} J</b> · m = <b>${P.mass} kg</b> · v = <b>${P.v} m/s</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Wave equation: a travelling sine wave, speed = f × λ ---- */
+    wave(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, midY = H / 2;
+      cap.textContent = "A wave's speed is its frequency times its wavelength. Stretch the wavelength or raise the frequency and it travels faster.";
+      let shift = 0;
+      (function loop() {
+        shift += P.freq * 1.6;
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = cssVar("--line"); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(W, midY); ctx.stroke();
+        const lamPx = clamp(P.lambda * 70, 40, W);
+        const k = TAU / lamPx, amp = 68;
+        ctx.strokeStyle = cssVar("--accent"); ctx.lineWidth = 3; ctx.beginPath();
+        for (let x = 0; x <= W; x += 3) {
+          const y = midY - Math.sin(k * (x - shift)) * amp;
+          x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke(); ctx.lineWidth = 1;
+        const x0 = 40;
+        ctx.strokeStyle = cssVar("--warn"); ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(x0, midY - amp - 12); ctx.lineTo(x0, midY + amp + 12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x0 + lamPx, midY - amp - 12); ctx.lineTo(x0 + lamPx, midY + amp + 12); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = cssVar("--warn"); ctx.font = "600 13px Inter"; ctx.textAlign = "center";
+        ctx.fillText("λ", x0 + lamPx / 2, midY - amp - 18);
+        const v = P.freq * P.lambda;
+        setRO(ro, `v = f·λ = <b>${v.toFixed(1)} m/s</b> · f = <b>${P.freq} Hz</b> · λ = <b>${P.lambda} m</b>`);
+        requestAnimationFrame(loop);
+      })();
+    },
+
+    /* ---- Kepler's 3rd: wider orbits take longer, T² ∝ a³ ---- */
+    kepler(cv, cap, P, ro) {
+      const ctx = cv.getContext("2d"), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2;
+      cap.textContent = "The square of a planet's year equals the cube of its orbit size. Distant planets crawl; close ones race.";
+      let ang = 0; const trail = [];
+      (function loop() {
+        ctx.clearRect(0, 0, W, H);
+        const r = clamp(28 + P.a * 44, 28, Math.min(W, H) / 2 - 26);
+        ctx.strokeStyle = cssVar("--line"); ctx.setLineDash([5, 7]);
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        const g = ctx.createRadialGradient(cx, cy, 3, cx, cy, 22);
+        g.addColorStop(0, "#fff6c8"); g.addColorStop(0.5, cssVar("--warn")); g.addColorStop(1, "rgba(255,180,84,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, TAU); ctx.fill();
+        const T = Math.pow(P.a, 1.5);
+        ang += 0.05 / T + 0.002;
+        const px = cx + Math.cos(ang) * r, py = cy + Math.sin(ang) * r;
+        trail.push([px, py]); if (trail.length > 60) trail.shift();
+        ctx.strokeStyle = cssVar("--accent"); ctx.globalAlpha = 0.5;
+        ctx.beginPath(); trail.forEach(([tx, ty], i) => (i ? ctx.lineTo(tx, ty) : ctx.moveTo(tx, ty))); ctx.stroke();
+        ctx.globalAlpha = 1;
+        const pg = ctx.createRadialGradient(px - 3, py - 3, 1, px, py, 9);
+        pg.addColorStop(0, cssVar("--accent-2")); pg.addColorStop(1, cssVar("--accent"));
+        ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, 9, 0, TAU); ctx.fill();
+        setRO(ro, `a = <b>${P.a.toFixed(1)}</b> · T = a^(3/2) = <b>${T.toFixed(2)}</b> years (so T² = a³)`);
+        requestAnimationFrame(loop);
+      })();
+    },
   };
 
   export const PHYS_ANIM = ANIMATIONS;
