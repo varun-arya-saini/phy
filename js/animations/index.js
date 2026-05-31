@@ -6,8 +6,8 @@
    These functions touch the DOM / canvas / requestAnimationFrame, so only
    import this from client components ("use client").
    ===================================================================== */
-import { PHYS_ANIM as BASE, makeEditable } from "./base";
-import { EXTRA_ANIM } from "./extra";
+import { PHYS_ANIM as BASE, makeEditable } from "./base.js";
+import { EXTRA_ANIM } from "./extra.js";
 
 export const PHYS_ANIM = { ...BASE, ...EXTRA_ANIM };
 export { makeEditable };

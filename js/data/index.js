@@ -5,9 +5,9 @@
 
    Plain data — safe to import from server or client components.
    ===================================================================== */
-import { PHYSICS_LAWS } from "./laws";
-import { CHEM_TOPICS } from "./chemistry";
-import { MATH_TOPICS } from "./maths";
+import { PHYSICS_LAWS } from "./laws.js";
+import { CHEM_TOPICS } from "./chemistry.js";
+import { MATH_TOPICS } from "./maths.js";
 
 export { PHYSICS_LAWS, CHEM_TOPICS, MATH_TOPICS };
 

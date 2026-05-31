@@ -1,5 +1,8 @@
 /* ===== Theme tokens ===== */
 :root {
+  /* Font stacks (loaded via Google Fonts <link> in the HTML head). */
+  --font-inter: "Inter";
+  --font-lora: "Lora";
   --bg: #0b1020;
   --bg-soft: #121a30;
   --card: #16203a;
