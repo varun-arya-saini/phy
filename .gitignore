@@ -1,1 +1,16 @@
+# build artifacts (in case a stale Next.js dev server regenerates them)
+/.next/
+/out/
+/node_modules
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# vercel
 .vercel

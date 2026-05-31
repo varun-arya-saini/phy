@@ -4,7 +4,7 @@
    formula breakdown, examples, controls, and an `anim` id mapping to an
    animation function in animations.js (window.PHYS_ANIM).
    ===================================================================== */
-window.CHEM_TOPICS = [
+export const CHEM_TOPICS = [
   {
     slug: "atomic-structure",
     name: "Atomic Structure",

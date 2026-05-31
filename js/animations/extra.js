@@ -1,12 +1,10 @@
 /* =====================================================================
    chem-math-animations.js — animations for the Chemistry & Maths
    libraries. Loads AFTER animations.js and merges its functions into the
-   shared window.PHYS_ANIM registry, so law.js (lesson pages) and
-   script.js (card previews) pick them up with no extra wiring.
+   shared PHYS_ANIM registry. Merged into the base engine in index.js.
    Same calling convention: fn(canvas, captionEl, P, readoutEl).
    ===================================================================== */
-(function () {
-  const TAU = Math.PI * 2;
+const TAU = Math.PI * 2;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const cssVar = (n) => getComputedStyle(document.body).getPropertyValue(n).trim();
   const setRO = (el, html) => { if (el) el.innerHTML = html; };
@@ -977,6 +975,4 @@
     },
   };
 
-  window.PHYS_ANIM = window.PHYS_ANIM || {};
-  Object.assign(window.PHYS_ANIM, EXTRA);
-})();
+export const EXTRA_ANIM = EXTRA;

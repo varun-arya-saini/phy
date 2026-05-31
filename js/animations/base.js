@@ -2,10 +2,9 @@
    animations.js — the shared physics animation engine.
    Exposes window.PHYS_ANIM = { <anim-id>: function(canvas, cap, P, ro) }.
    Used by the law detail pages (law.js) and the library card previews
-   (script.js). Wrapped in an IIFE so its helpers stay private.
+   (script.js). An ES module — top-level helpers stay module-private.
    ===================================================================== */
-(function () {
-  const TAU = Math.PI * 2;
+const TAU = Math.PI * 2;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const cssVar = (n) => getComputedStyle(document.body).getPropertyValue(n).trim();
   const setRO = (el, html) => { if (el) el.innerHTML = html; };
@@ -669,7 +668,7 @@
     },
   };
 
-  window.PHYS_ANIM = ANIMATIONS;
+  export const PHYS_ANIM = ANIMATIONS;
 
   /* ---------------------------------------------------------------
      Turn a range slider into a "slider + type-any-number" control.
@@ -678,7 +677,7 @@
      auto-expands the slider, so values are never capped to presets.
      Returns the created number input.
      --------------------------------------------------------------- */
-  window.PHYS_makeEditable = function (slider, displayEl) {
+  export function makeEditable(slider, displayEl) {
     const num = document.createElement("input");
     num.type = "number";
     num.className = "num-input";
@@ -703,5 +702,4 @@
     };
     num.addEventListener("input", apply);
     return num;
-  };
-})();
+  }
